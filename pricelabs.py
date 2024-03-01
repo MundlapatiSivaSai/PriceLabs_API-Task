@@ -3,8 +3,10 @@ import csv
 import json
 import time
 
+# Function to fetch property listings 
 def fetch_listings(address, page_size, retries=5, backoff_factor=1):
-    url = "https://www.vrbo.com/graphql"
+    url = "https://www.vrbo.com/graphql" # API endpoint
+    # Headers to mimic a legitimate request from a web browser
     headers = {
         'authority': 'www.vrbo.com',
         'accept': '*/*',
@@ -25,6 +27,8 @@ def fetch_listings(address, page_size, retries=5, backoff_factor=1):
         'x-enable-apq': 'true',
         'x-page-id': 'page.Hotel-Search,H,20'
     }
+
+    # Request body with query parameters and variables for the search
     body = json.dumps({
   "operationName": "LodgingPwaPropertySearch",
   "variables": {
@@ -131,14 +135,16 @@ def fetch_listings(address, page_size, retries=5, backoff_factor=1):
   }
 })
     print(f"Fetching the API URL - {url}")
-
+    # Attempt to fetch the data with retries in case of rate limiting
     for attempt in range(retries):
         response = hrequests.post(url, json=body, headers=headers)
         if response.status_code == 200:
+            # Parse the JSON response and extract the listings
             data = response.json()
             listings = data['data']['propertySearch']['propertySearchListings']
             return listings
         elif response.status_code == 429:
+            # Handling rate limit
             sleep_time = backoff_factor * (2 ** attempt)
             print(f"Rate limit exceeded. Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
@@ -148,14 +154,19 @@ def fetch_listings(address, page_size, retries=5, backoff_factor=1):
     print("Failed to fetch listings after retrying.")
     return []
 
+# Function to generate a CSV file from the fetched listings
 def generate_csv(listings, filename="listings.csv"):
     try:
-        with open(filename, mode='w', newline='') as file:
+        # Creating the CSV file for writing
+        with open(filename, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
+            # Writing the CSV headers
             writer.writerow(["Listing ID", "Listing Title", "Nightly Price", "Listing URL"])
 
+            # Iterating over listings and writing their details to the CSV 
             for listing in listings:
                 try:
+                    #Extract and writing individual fields
                     writer.writerow([
                         listing['id'],
                         listing.get('headingSection', {}).get('heading', 'N/A'),
